@@ -27,6 +27,47 @@
 #include "util.h"
 #include "audio.h"
 
+#ifdef __PSP__
+#include <pspkernel.h>
+PSP_MODULE_INFO("zelda3", 0, 1, 1);
+PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
+
+static int exitRequest = 0;
+
+int exitCallback(int arg1, int arg2, void *common)
+{
+	exitRequest = 1;
+	return 0;
+}
+
+int callbackThread(SceSize args, void *argp)
+{
+	int cbid;
+
+	cbid = sceKernelCreateCallback("Exit Callback", exitCallback, NULL);
+	sceKernelRegisterExitCallback(cbid);
+
+	sceKernelSleepThreadCB();
+
+	return 0;
+}
+
+int setupCallbacks(void)
+{
+	int thid = 0;
+
+	thid = sceKernelCreateThread("update_thread", callbackThread, 0x11, 0xFA0, 0, 0);
+	if(thid >= 0)
+	{
+		sceKernelStartThread(thid, 0, 0);
+	}
+
+	return thid;
+}
+
+
+#endif
+
 static bool g_run_without_emu = 0;
 
 // Forwards
@@ -233,7 +274,7 @@ static bool SdlRenderer_Init(SDL_Window *window) {
 
   int tex_mult = (g_ppu_render_flags & kPpuRenderFlags_4x4Mode7) ? 4 : 1;
   g_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
-                                g_snes_width * tex_mult, g_snes_height * tex_mult);
+                                g_snes_width /** tex_mult*/, g_snes_height /** tex_mult*/);
   if (g_texture == NULL) {
     printf("Failed to create texture: %s\n", SDL_GetError());
     return false;
@@ -274,7 +315,7 @@ static const struct RendererFuncs kSdlRendererFuncs  = {
   &SdlRenderer_EndDraw,
 };
 
-void OpenGLRenderer_Create(struct RendererFuncs *funcs, bool use_opengl_es);
+void OpenGLRenderer_Create(struct RendererFuncs *funcs, bool use_opengl_es){}
 
 #undef main
 int main(int argc, char** argv) {
@@ -286,6 +327,9 @@ int main(int argc, char** argv) {
   } else {
     SwitchDirectory();
   }
+#ifdef __PSP__
+  setupCallbacks();
+#endif
   ParseConfigFile(config_file);
   LoadAssets();
   LoadLinkGraphics();

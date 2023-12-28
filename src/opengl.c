@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include "types.h"
 #include "util.h"
-#include "glsl_shader.h"
+//#include "glsl_shader.h"
 #include "config.h"
 
 #define CODE(...) #__VA_ARGS__
@@ -15,7 +15,7 @@ static size_t g_screen_buffer_size;
 static int g_draw_width, g_draw_height;
 static unsigned int g_program, g_VAO;
 static GlTextureWithSize g_texture;
-static GlslShader *g_glsl_shader;
+//static GlslShader *g_glsl_shader;
 static bool g_opengl_es;
 
 static void GL_APIENTRY MessageCallback(GLenum source,
@@ -169,10 +169,12 @@ static bool OpenGLRenderer_Init(SDL_Window *window) {
     printf("%s\n", infolog);
   }
 
+  /*
   if (g_config.shader)
     g_glsl_shader = GlslShader_CreateFromFile(g_config.shader, g_opengl_es);
   
   return true;
+  */
 }
 
 static void OpenGLRenderer_Destroy() {
@@ -228,7 +230,7 @@ static void OpenGLRenderer_EndDraw() {
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 
-  if (g_glsl_shader == NULL) {
+  //if (g_glsl_shader == NULL) {
     glViewport(viewport_x, viewport_y, viewport_width, viewport_height);
     glUseProgram(g_program);
     int filter = g_config.linear_filtering ? GL_LINEAR : GL_NEAREST;
@@ -236,9 +238,9 @@ static void OpenGLRenderer_EndDraw() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
     glBindVertexArray(g_VAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-  } else {
+  /*} else {
     GlslShader_Render(g_glsl_shader, &g_texture, viewport_x, viewport_y, viewport_width, viewport_height);
-  }
+  }*/
 
   SDL_GL_SwapWindow(g_window);
 }
