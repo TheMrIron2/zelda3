@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <SDL.h>
+#include <SDL2/SDL.h>
 #ifdef _WIN32
 #include "platform/win32/volume_control.h"
 #include <direct.h>
@@ -28,44 +28,32 @@
 #include "audio.h"
 
 #ifdef __PSP__
+#include <pspdebug.h>
 #include <pspkernel.h>
 PSP_MODULE_INFO("zelda3", 0, 1, 1);
 PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
+PSP_HEAP_SIZE_KB(-1024);
 
-static int exitRequest = 0;
-
-int exitCallback(int arg1, int arg2, void *common)
-{
-	exitRequest = 1;
+int exit_callback(int arg1, int arg2, void* common){
+	sceKernelExitGame();
 	return 0;
 }
-
-int callbackThread(SceSize args, void *argp)
-{
-	int cbid;
-
-	cbid = sceKernelCreateCallback("Exit Callback", exitCallback, NULL);
+ 
+int CallbackThread(SceSize args, void* argp) {
+	int cbid = sceKernelCreateCallback("Exit Callback", exit_callback, NULL);
 	sceKernelRegisterExitCallback(cbid);
-
 	sceKernelSleepThreadCB();
-
+ 
 	return 0;
 }
-
-int setupCallbacks(void)
-{
-	int thid = 0;
-
-	thid = sceKernelCreateThread("update_thread", callbackThread, 0x11, 0xFA0, 0, 0);
-	if(thid >= 0)
-	{
+ 
+int setupCallbacks(void) {
+	int thid = sceKernelCreateThread("update_thread", CallbackThread, 0x11, 0xFA0, 0, 0);
+	if (thid >= 0) {
 		sceKernelStartThread(thid, 0, 0);
 	}
-
 	return thid;
 }
-
-
 #endif
 
 static bool g_run_without_emu = 0;
@@ -110,11 +98,15 @@ static uint32 g_gamepad_modifiers;
 static uint16 g_gamepad_last_cmd[kGamepadBtn_Count];
 
 void NORETURN Die(const char *error) {
-#if defined(NDEBUG) && defined(_WIN32)
   SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, kWindowTitle, error, NULL);
-#endif
   fprintf(stderr, "Error: %s\n", error);
+  #ifdef __PSP__
+  pspDebugScreenInit();
+  pspDebugScreenPrintf("%s\n", error);
+  while (true){ sceKernelSleepThreadCB(); };
+  #else
   exit(1);
+  #endif
 }
 
 void ChangeWindowScale(int scale_step) {
